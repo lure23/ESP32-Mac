@@ -1,12 +1,10 @@
 # ESP32/Rust on macOS
 
-Instructions on how to set up an ESP32 Rust development toolchain, using macOS host (for IDE) and a Multipass VM (other tooling).
-
-The explicit (and only) target is [Embassy](https://embassy.dev) development.
+Getting started with ESP32 Rust development, using macOS host (for IDE) and a Multipass VM (other tooling).
 
 >Note: This repo builds upon [ESP32 on WSL](https://github.com/lure23/ESP32-WSL) (Windows and WSL; esp-idf; C/C++)
 >
->If you are interested in using WSL instead of Multipass, check that repo together with this. Also, you can attach the ESP32 dev board directly to the Mac, but this case isn't covered (yet). Let the author know if the arrangement of two repos feels uncomfortable.
+>If you are interested in using WSL instead of Multipass, check that repo together with this. Also, you can attach the ESP32 dev board directly to the Mac, but this use case isn't covered in this repo, yet. <!-- #whisper (mostly because there's no good open source USB/IP server for macOS and Multipass doesn't have USB device management, unlike other VM solutions). -->
 
 <!-- tbd. eventually, a schematics picture on how it all falls in
 - USB server (usbipd, driver)
@@ -18,81 +16,83 @@ The explicit (and only) target is [Embassy](https://embassy.dev) development.
 ## Aim 🍏⛓️
 
 - Minimal software installs on the host (Mac)
-- Ability to flash the device from within Multipass VM
-- RISC V only 
+- Ability to flash <!--(and later, debug)--> the device from within Multipass VM
 
-   <!--#whisper If you want to contribute as a co-host, maintaining the Xtensa architecture, let the author know.-->
+**Focus**
 
-<!-- #later???
-- Ability to develop with a host-side IDE
-	- ..including debugging
--->
+- RISC V only
 
-### No nightlies needed!
+   >If you want Xtensa-based chips covered, please sign up as a co-author. :)
 
-The repo only handles workflows on stable Rust. Needing to use `nightly` is unfortunately out of the scope.
+- [Embassy](https://embassy.dev) async development
 
->*Furthermore, for ESP32-C3, a nightly version of the Rust toolchain is currently required, for this training we will use nightly-2023-11-14 version.* <sub>[Embedded Rust (no_std) on Espressif](https://docs.esp-rs.org/no_std-training/02_2_software.html)
+   Embassy is a *generational shift* in embedded programming, like Node.js was for cloud backends.
 
-This might not hold any more, but the above text is there (2-Jun-24). Is it true? If so, C3 is ruled out.
+- Only stable Rust
 
+	All ESP32 (RISC V) Rust development should be possible using the stable Rust (Jun'24). Documentation online still tells otherwise, but it may be either a) outdated and/or b) refer to Xtensa chip variants.
+
+	<!-- disabled; keep for now
+	>*Furthermore, for ESP32-C3, a nightly version of the Rust toolchain is currently required, for this training we will use nightly-2023-11-14 version.* <sub>[Embedded Rust (no_std) on Espressif](https://docs.esp-rs.org/no_std-training/02_2_software.html)
+	-->
 
 ## Requirements
 
-- Mac with
+- Mac with:
    - [Multipass](https://multipass.run) installed
-
-   <!-- disable?
-   - `rust-emb` development VM running from [`mp`](https://github.com/akauppi/mp) (GitHub) -->
 
 - Windows computer (Win10 Home is enough)
    - [`usbipd-win`](https://github.com/dorssel/usbipd-win) 4.2.0 (or later) installed
 
-   >Note: A Linux computer would do just as well, and the author would like to *eventually* provide guidance on using a Raspberry-Pi for this USB hosting. You can probably set such up on your own, with basic Linux knowledge and adapting from this guide.
+      >Note: A Linux computer would do just as well, and the author plans to *eventually* provide guidance on using a Raspberry Pi for this USB hosting. You can probably set such up on your own, with basic Linux knowledge and adapting this guide.
 
    - `CP210x universal Windows driver` (11.3.0) installed from [CP210x USB to UART Bridge VCP Drivers](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers) (SiLabs)
 
-	>*Note: This may not be needed for ESP32-C6 development, only ESP32-C3.*
-	
-	<!-- disable
-	For instructions on setting up USB hosting on the Windows side, see [ESP32-WSL](https://github.com/lure23/ESP32-WSL?tab=readme-ov-file#steps-set-up-usb-ip-bridging) (GitHub).
-	-->
 	
 ### Embedded hardware
 
+The intention is to support as many common ESP32 (RISC V) development boards as possible. If you have access to boards not listed below, please consider giving a PR and/or becoming a co-author to the repo. 
+
 **Warning!!**
 
-When powering the ESP32 boards for the first time, <font color=dark>**BEWARE OF THE STRONG LED LIGHT!!**</font> The author used a tape on top, until he reflashed the device. 😎🩹
+*When powering the ESP32 boards for the first time, <font color=dark>**BEWARE OF THE STRONG LED LIGHT!!**</font> The author used a tape on top, until he reflashed the device. 😎🩹*
 
-|board|hw version|status|notes|
-|---|---|---|---|
-|**[ESP32-C3-DevKitC-02](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html)**|1.1|<font color=red>no connection</font> with `probe-rs`|
-|**[ESP32-C6-DevKitM-1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/user_guide.html)**|1.0|<font color=orange>**WIP to have first contact tbd.**</font>|Connect USB cable to the port on the right (ports facing you); it has JTAG circuitry.|
-|**[ESP32-C3-DevKit-RUST-1](https://www.espressif.com/en/dev-board/esp32-c3-devkit-rust-1-en)**|tbd.|Waiting for delivery *tbd.*|
+---
 
-*Hint: To check your hw version, look at the printing on the bottom side of the board.*
+|board|hw version<sub>`[1]`</sub>|chip revision<sub>`[2]`</sub>|status|notes|
+|---|---|---|---|---|
+|**[ESP32-C3-DevKitC-02](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html)**|1.1|0.4|works with `espflash`|
+|**[ESP32-C6-DevKitM-1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/user_guide.html)**|1.0|0.0|works with `espflash`||
+|**[ESP32-C3-DevKit-RUST-1](https://www.espressif.com/en/dev-board/esp32-c3-devkit-rust-1-en)**|--|--|*tbd. Waiting for delivery (3-Jun-24)*|
 
-<!-- disabled: #later elsewhere? tbd.
-**Alternatives**
+<small>
+`[1]`: version *physically printed* on the back side of the circuit board.
 
-If you don't want to use a separate PC/Raspberry Pi for USB hosting, but are ready to connect the ESP32 devkit directly to your mac, there are [some instructions](...). <font color=orange>*tbd.*</font>
+`[2]`: revision listed when running `espflash board-info` or restarting a board. This matters to some functionality, e.g. for C3 boards JTAG functionality is available for chip revisions >= 0.4. Note that when earlier documentation and bootloaders mention chip revisions "3" and "4", they mean 0.3 and 0.4 (ESP-IDF 5.0 onwards).
+</small>
 
->TL;DR: You'll need to:
-- install `CP210x` driver on the Mac
-- run a USB/IP server on the Mac (*not* available as open source) **or** use a virtualization product
+#### Board specific notes
 
-<p/>
+**ESP32-C6-DevKitM-01**
 
->Note that physically separating the devkit from your (main?) computer has the added benefit that if something goes haywire with - say - your solderings, you are not jeopardising your main computer. This is why the author prefers this two-machine solution.
--->
+The dev board has two USB ports:
+
+![](.images/devkitm-1-ports.png)
+
+Ideally, one could use either of these to reach the device, but in practice there are differences.
+
+*tbd. Explain the differences*
+
+For now, **connect the cable to the "left"** (`uart`) port. This way, the default settings of `esp-hal` (we'll get there soon) will allow `println` messages to be see on the VM terminal.
+
 
 <!-- 
 Developed on:
 
 Mac:
-- macOS 14.5
-- (CP210x device driver v. 6.0.2 optional; if running on single computer)
+- macOS 14.5 (Intel)
 - Multipass 1.13.1
+- (CP210x device driver v. 6.0.2 optional; if running on single computer)
 
 Windows:
 - Windows 10 Home
@@ -104,23 +104,53 @@ Windows:
 
 ## Prepare
 
-### Setting up USB/IP sharing
+### USB/IP sharing
 
-- See [ESP32-WSL](https://github.com/lure23/ESP32-WSL?tab=readme-ov-file#steps-set-up-usb-ip-bridging) (GitHub).
+- Set up USB/IP sharing according to instructions in the [ESP32-WSL](https://github.com/lure23/ESP32-WSL?tab=readme-ov-file#steps-set-up-usb-ip-bridging) (ignore the WSL parts of it).
 
-	Mark down the IP of the machine (Windows or Linux) providing USB/IP bridging.
+	You should have:
+	
+	- `usbipd bind` exposing the dev board to the network
+	- IP of the computer doing the sharing
 
+### Multipass VM
 
-### Launching Multipass VM
+We use a Multipass VM to keep the Rust development toolchain away from your main account. This is similar to using a dockerized workflow for development.
 
-- See [`mp`](https://github.com/akauppi/mp) (GitHub) and have the `rust-emb` VM running.
+- Study the [`mp`](https://github.com/akauppi/mp) repo in detail!
+
+	- Create the `rust-emb` instance within it.
+
+### Work folder
+
+We'll clone [`esp-rs/esp-hal`](https://github.com/esp-rs/esp-hal) since it has good examples to see that the development toolchain works (before going to Embassy).
+
+Within the host:
+
+- In folder of your choice:
+
+   ```
+   $ git clone -depth 1 git@github.com:esp-rs/esp-hal.git
+   ...
+
+	$ multipass stop rust-emb
+	$ multipass mount --type=native esp-hal rust-emb:/home/ubuntu/esp-hal
+	```
+
+	The `esp-hal` folder now resides on your host, but can be accessed from the VM.
+
+>Note: Mounting with `--type=native` provides "better performance" than default MP mounts, but requires the VM to be switched off while changes to the mounts are made. 	
 
 
 ### Connecting the device to Multipass
 
-We presume you have the USB-to-IP server running, and know the IP of the intermediate machine (`192.168.1.29` below - replace with yours).
+We presume you have the USB/IP server running, and know the IP of the  machine (`192.168.1.29` below - replace with yours).
 
-The following commands are to be given in the `rust-emb` VM:
+```
+$ multipass shell rust-emb
+```
+
+>The following commands are to be given in the `rust-emb` VM.
 
 1. Check that you can see the dev board (optional)
 
@@ -128,7 +158,7 @@ The following commands are to be given in the `rust-emb` VM:
    $ usbip list -r 192.168.1.29
 	```
 	
-	<details><summary>**ESP32-C3-DevKitC-02 v.1.1**</summary>
+	<details><summary>**ESP32-C3-DevKitC-02**</summary>
 
    ```
    Exportable USB devices
@@ -141,7 +171,20 @@ The following commands are to be given in the `rust-emb` VM:
    ```
    </details>
 
-	<details><summary>**ESP32-C6-DevKitM-1 v.1.0**</summary>
+	<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
+
+   ```
+	Exportable USB devices
+	======================
+	 - 192.168.1.29
+	        3-1: Silicon Labs : CP210x UART Bridge (10c4:ea60)
+	           : USB\VID_10C4&PID_EA60\3086768A3759ED11B797B7301D62BC44
+	           : (Defined at Interface level) (00/00/00)
+	           :  0 - Vendor Specific Class / unknown subclass / unknown protocol (ff/00/00)
+	```
+	</details>
+
+	<details><summary>**ESP32-C6-DevKitM-1 (`JTAG-serial`)**</summary>
 
    ```
 	Exportable USB devices
@@ -168,7 +211,7 @@ The following commands are to be given in the `rust-emb` VM:
    $ lsusb
    ```
    
-	<details><summary>**ESP32-C3-DevKitC-02 v.1.1**</summary>
+	<details><summary>**ESP32-C3-DevKitC-02**</summary>
 
 	```
    Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
@@ -176,8 +219,17 @@ The following commands are to be given in the `rust-emb` VM:
    Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
    ```
 	</details>
+
+	<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
+
+	```
+	Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
+	Bus 001 Device 007: ID 10c4:ea60 Silicon Labs CP210x UART Bridge
+	Bus 002 Device 001: ID 1d6b:0003 Linux Foundation 3.0 root hub
+	```
+	</details>
 	
-	<details><summary>**ESP32-C6-DevKitM-1 v.1.0**</summary>
+	<details><summary>**ESP32-C6-DevKitM-1 (`JTAG-serial`)**</summary>
 
 	```
 	Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub
@@ -186,14 +238,80 @@ The following commands are to be given in the `rust-emb` VM:
 	```
 	</details>
 
-4. Check with `probe-rs`
+4. Check with `espflash`
 
-	>Haven't gotten this working with the `ESP32-C3-DevKitC-02`, so needing to abandon that target, for now. <!--tbd. Create an issue, then mention here!!!-->
+	```
+	$ espflash board-info
+	```
+
+	<details><summary>**ESP32-C3-DevKitC-02**</summary>
+
+	```
+	[2024-06-03T11:27:27Z INFO ] Serial port: '/dev/ttyUSB0'
+	[2024-06-03T11:27:27Z INFO ] Connecting...
+	[2024-06-03T11:27:28Z INFO ] Using flash stub
+	Chip type:         esp32c3 (revision v0.4)
+	Crystal frequency: 40 MHz
+	Flash size:        4MB
+	Features:          WiFi, BLE
+	MAC address:       54:32:04:41:7d:60
+   ```
+	</details>
+
+	<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
+
+	```
+	[2024-06-03T11:00:18Z INFO ] Serial port: '/dev/ttyUSB0'
+	[2024-06-03T11:00:18Z INFO ] Connecting...
+	[2024-06-03T11:00:18Z INFO ] Using flash stub
+	Chip type:         esp32c6 (revision v0.0)
+	Crystal frequency: 40 MHz
+	Flash size:        4MB
+	Features:          WiFi 6, BT 5
+	MAC address:       54:32:04:07:15:10
+	```
+	</details>
 	
-	<details><summary>**ESP32-C6-DevKitM-1 v.1.0**</summary>
+	<details><summary>**ESP32-C6-DevKitM-1 (`JTAG-serial`)**</summary>
+
+	```
+	[2024-06-03T11:25:36Z INFO ] Serial port: '/dev/ttyACM0'
+	[2024-06-03T11:25:36Z INFO ] Connecting...
+	[2024-06-03T11:25:36Z INFO ] Using flash stub
+	Chip type:         esp32c6 (revision v0.0)
+	Crystal frequency: 40 MHz
+	Flash size:        4MB
+	Features:          WiFi 6, BT 5
+	MAC address:       54:32:04:07:15:10	
+	```
+	</details>
+
+	Info: `espflash` is one of the commands you can use for interacting with the device (flashing and seeing its info).
+	
+
+5. Check with `probe-rs`
 
 	```
 	$ probe-rs list
+	```
+	
+	<details><summary>**ESP32-C3-DevKitC-02**</summary>
+
+	```
+	No debug probes were found.
+	```
+	</details>
+
+	<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
+
+	```
+	No debug probes were found.
+	```
+	</details>
+
+	<details><summary>**ESP32-C6-DevKitM-1 (`JTAG-serial`)**</summary>
+
+	```
 	The following debug probes were found:
 	[0]: ESP JTAG -- 303a:1001:54:32:04:07:15:10 (EspJtag)
 	```
