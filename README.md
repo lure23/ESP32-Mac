@@ -121,6 +121,7 @@ We use a Multipass VM to keep the Rust development toolchain away from your main
 
 	- Create the `rust-emb` instance within it.
 
+<!-- disabled/REMOVE? (covered later)
 ### Work folder
 
 We'll clone [`esp-rs/esp-hal`](https://github.com/esp-rs/esp-hal) since it has good examples to see that the development toolchain works (before going to Embassy).
@@ -140,7 +141,7 @@ Within the host:
 	The `esp-hal` folder now resides on your host, but can be accessed from the VM.
 
 >Note: Mounting with `--type=native` provides "better performance" than default MP mounts, but requires the VM to be switched off while changes to the mounts are made. 	
-
+-->
 
 ### Connecting the device to Multipass
 
@@ -320,7 +321,7 @@ $ multipass shell rust-emb
 
 ## Run some examples from `esp-hal`
 
->**Background**: The [esp-hal](https://github.com/esp-rs/esp-hal) repo (Hardware Abstraction Layer) has code that allows using the ESP32 hardware from Rust. It includes also an `examples` folder that we'll look into.
+>**Background**: The [esp-hal](https://github.com/esp-rs/esp-hal) repo (Hardware Abstraction Layer) has code that allows using the ESP32 hardware from Rust. It also includes an `examples` folder that we'll look into.
 
 
 ### Clone
@@ -342,15 +343,9 @@ $ multipass mount --type=native esp-hal rust-emb:/home/ubuntu/esp-hal
 
 >Note: We don't need to enter the `esp-hal` folder on the host side. Just sharing it with the VM.
 
-<!-- disabled (too much)
-<p />
-
->Warn: The size of the folder becomes around 1.9GB (try `du -h -d1 .`). This author prefers having such large folders on the host side. Your call, though.
--->
-
 Now you have `esp-hal` available within the VM. 
 
->Note: Unfortunately, using `--type=native` requires the VM to be shut down when adding/removing mounts. On the other side, it promises better performance than default Multipass mounts.
+>Note: Unfortunately, using `--type=native` requires the VM to be shut down when adding/removing mounts. On the other side, it promises better performance than default Multipass mounts. The folder is huge (ca. 1.9GB) so we like to have the performance!!
 
 ### Restart the VM
 
@@ -374,7 +369,7 @@ $ cd esp-hal
 
 >Study the [`esp-hal/examples/`](https://github.com/esp-rs/esp-hal/tree/main/examples/) folder. 
 >
->This is a treasure trove of dealing with different sensors. To begin with, we just build (and run) the `hello_world` to see connection to the development board would work.
+>This is a treasure trove of dealing with different sensors. To begin with, we just build (and run) the `hello_world` example.
 
 <!-- tbd...?
 -- here about editing `Cargo.toml` **IF** this helps with the console output:
@@ -391,98 +386,39 @@ $ cargo xtask run-example esp-hal esp32c6 hello_world
 
 Output:
 
-```
-    Updating crates.io index
-  Downloaded proc-macro2 v1.0.85
-  Downloaded strum_macros v0.26.3
-  Downloaded 2 crates (76.4 KB) in 0.26s
-   Compiling proc-macro2 v1.0.85
-   Compiling unicode-ident v1.0.12
-   Compiling memchr v2.7.2
-   Compiling serde v1.0.203
-   Compiling quote v1.0.36
-   Compiling syn v2.0.66
-   Compiling utf8parse v0.2.1
-   Compiling anstyle-parse v0.2.4
-   Compiling aho-corasick v1.1.3
-    Building [===>                       ] 10/63: aho-corasick, syn      
-[...]
-     Running `target/debug/xtask run-example esp-hal esp32c6 hello_world`
-[2024-06-02T07:36:32Z WARN  xtask] Package 'esp-hal' specified, using 'examples' instead
-[2024-06-02T07:36:32Z INFO  xtask] Building example '/home/ubuntu/esp-hal/examples/src/bin/hello_world.rs' for 'esp32c6'
-[2024-06-02T07:36:32Z INFO  xtask] Package: "src/bin/hello_world.rs"
-[...]
-   Compiling rand_core v0.6.4
-   Compiling strum_macros v0.26.3
-    Building [==>                       ] 37/251: darling_macro, strum_macros                                                                              
-[...]
-   Compiling embassy-futures v0.1.1
-    Finished `release` profile [optimized + debuginfo] target(s) in 7m 59s
-     Running `espflash flash --monitor target/riscv32imac-unknown-none-elf/release/hello_world`
-? Use serial port '/dev/ttyACM0' - USB JTAG/serial debug unit? (y/n) ›
-```
-
-The output pauses here. Answer `**yes**` and `**yes**`:
+<details><summary>**ESP32-C3-DevKitC-02**</summary>
 
 ```
-✔ Use serial port '/dev/ttyACM0' - USB JTAG/serial debug unit? · yes
-✔ Remember this serial port for future use? · yes
-[2024-06-02T07:55:07Z INFO ] Serial port: '/dev/ttyACM0'
-[2024-06-02T07:55:07Z INFO ] Connecting...
-[2024-06-02T07:55:08Z INFO ] Using flash stub
-Chip type:         esp32c6 (revision v0.0)
-Crystal frequency: 40 MHz
-Flash size:        4MB
-Features:          WiFi 6, BT 5
-MAC address:       54:32:04:07:15:10
-App/part. size:    33,424/4,128,768 bytes, 0.81%
-[00:00:00] [========================================]      13/13      0x0                                                                                    [00:00:00] [========================================]       1/1       0x8000                                                                                 [00:00:00] [========================================]      20/20      0x10000                                                                                [2024-06-02T07:55:09Z INFO ] Flashing has completed!
-Commands:
-    CTRL+R    Reset chip
-    CTRL+C    Exit
+...
+Hello world!
+Hello world!
+```
+</details>
 
-ESP-ROM:esp32c6-20220919
-Build:Sep 19 2022
-rst:0x15 (USB_UART_HPSYS),boot:0xc (SPI_FAST_FLASH_BOOT)
-Saved PC:0x40800540
-0x40800540 - esp_hal::interrupt::riscv::vectored::get_configured_interrupts
-    at ??:??
-SPIWP:0xee
-mode:DIO, clock div:2
-load:0x4086c410,len:0xd48
-load:0x4086e610,len:0x2d68
-load:0x40875720,len:0x1800
-entry 0x4086c410
-I (23) boot: ESP-IDF v5.1-beta1-378-gea5e0ff298-dirt 2nd stage bootloader
-I (23) boot: compile time Jun  7 2023 08:02:08
-I (24) boot: chip revision: v0.0
-I (28) boot.esp32c6: SPI Speed      : 40MHz
-I (33) boot.esp32c6: SPI Mode       : DIO
-I (37) boot.esp32c6: SPI Flash Size : 4MB
-I (42) boot: Enabling RNG early entropy source...
-I (48) boot: Partition Table:
-I (51) boot: ## Label            Usage          Type ST Offset   Length
-I (58) boot:  0 nvs              WiFi data        01 02 00009000 00006000
-I (66) boot:  1 phy_init         RF data          01 01 0000f000 00001000
-I (73) boot:  2 factory          factory app      00 00 00010000 003f0000
-I (81) boot: End of partition table
-I (85) esp_image: segment 0: paddr=00010020 vaddr=42000020 size=056cch ( 22220) map
-I (98) esp_image: segment 1: paddr=000156f4 vaddr=40800000 size=00014h (    20) load
-I (102) esp_image: segment 2: paddr=00015710 vaddr=42005710 size=01c5ch (  7260) map
-I (112) esp_image: segment 3: paddr=00017374 vaddr=40800014 size=00ef8h (  3832) load
+<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
+
+```
+...
+Hello world!
+Hello world!
+```
+</details>
+
+<details><summary>**ESP32-C6-DevKitM-1 (`JTAG-serial`)**</summary>
+
+```
+...
+I (112) esp_image: segment 3: paddr=00017614 vaddr=40800020 size=00eech (  3820) load
 I (120) boot: Loaded app from partition at offset 0x10000
 ```
 
-Did the sample run?
+(no output)
 
-```
-    CTRL+R    Reset chip
-    CTRL+C    Exit
-```
+See the devkit specific appendix for an explanation.
 
-Not sure. It seems the development board works, but we don't see `Hello world!` anywhere. <sub>[source](https://github.com/esp-rs/esp-hal/blob/main/examples/src/bin/hello_world.rs#L38)</sub>
+Since console output only goes to `uart`, it's probably best to move to using that port, for further examples. <!-- tbd. ideally, we'd tell here how to enable the output -->
+</details>
 
-<font color=orange>*tbd. Figure out why the output doesn't reach the host terminal.*</font>
 
 ### More samples
 
@@ -492,15 +428,17 @@ To see which samples are suitable for e.g. `esp32-c6`:
 $ git grep -P "(?<=% CHIPS:).*esp32c6" examples/src/
 ```
 
-That gives 82 matches! 😃
+That gives 82 (65 for C3) matches! 😃
 
-<!-- 
-### ADC
+<!-- tbd. #later show some 2 examples; now FWD to Embassy!
+	// didn't get 'println' output from ADC; no blinks with Blinky
+	
+#### ADC
 ...
 -->
 
 <!-- tbd. Doesn't blink the *internal* LED; fix that?
-### Blinky 🚨
+#### Blinky 🚨
 
 Leaving the lack of `println` visibility behind, let's check:
 
@@ -512,32 +450,93 @@ $ cargo xtask run-example esp-hal esp32c6 blinky
 
 ## Embassy!
 
-**tbd.**
+The `esp-hal` and [`embassy`](https://github.com/embassy-rs/embassy) repos seem to be arranged so (for ESP32, that is) that we don't need to switch repos. The examples for Embassy are within [`esp-hal/examples/src/bin/`](https://github.com/esp-rs/esp-hal/tree/main/examples/src/bin) `embassy_*.rs` (18 of them).
 
-The main `loop` of the `blinky` application does busy-looping. It keeps the CPU running all the time.
+This is good. 
 
-By moving to [Embassy](https://embassy.dev) we can solve that for good!
-
-
+>What's special about Embassy? It harnesses the `async`/`await` mechanism, making creating *concurrent* embedded code *easy* to write. This is brilliance - see [Embassy.dev](https://embassy.dev) for more details or just hang on and let's give it a try! ☀️
 
 
-<!-- bring back, IF we get things to work... tbd.
+```
+$ cargo xtask run-example esp-hal esp32c6 embassy_hello_world
+```
+
+<details><summary>**ESP32-C3-DevKitC-02**</summary>
+
+```
+Init!
+Bing!
+Hello world from embassy using esp-hal-async!
+Hello world from embassy using esp-hal-async!
+```
+</details>
+
+<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
+
+```
+...
+Init!
+Bing!
+Hello world from embassy using esp-hal-async!
+Hello world from embassy using esp-hal-async!
+```
+</details>
+
+<details><summary>**ESP32-C6-DevKitM-1 (`JTAG-serial`)**</summary>
+
+```
+...
+Init!
+Bing!
+Hello world from embassy using esp-hal-async!
+Hello world from embassy using esp-hal-async!
+```
+</details>
+
+**About `JTAG-serial` and `defmt` logging**
+
+The above example was able to be run also on C6 `JTAG-serial`, with a one line configuration change in `examples/Cargo.toml`:
+
+```diff
+-esp-println         = { path = "../esp-println", features = ["log"] }
++esp-println         = { path = "../esp-println", default-features=false, features = ["log", "jtag-serial", "defmt-espflash"] }
+```
+
+The default (that works for C3 and C6 `uart`) is targeting `uart`. Here, we prevented default features (`default-features=false`) and manually chose output to go to `jtag-serial`.
+
+In addition - and this may be useful for any target - `defmt-espflash` was enabled. You can [read online more](https://defmt.ferrous-systems.com) about `defmt`; in short it makes logging easier on the embedded side, causing smaller binary sizes. It's a Good Thing but needs support from the development toolchain. Which we seem to have.
+
+All this works because the `embassy_hello_world` uses `esp_println::println!` for its output.
+
+### Other samples
+
+Now is a good time to check through the other 17 samples that start with `embassy_*`.
+
+
+## What's so great about Embassy?
+
+It just helps you code embedded in the *right* and *efficient* way. If all your code are `await`ing something, it means the Embassy scheduler has placed the CPU to sleep mode. These are details you just don't need to be concerned of.
+
+This author sees a bright future for the Embassy project, and now You can be part of it!
+
+
 ## Outcome
 
-We have set up the development tools fully within Multipass. On the Mac side, there's nothing that needs to be installed.
+We set out to create a development toolchain with the following aims:
 
-Unfortunately, we weren't able to get the `usbipd` server running properly on macOS, but that may change over the years. Also - you may look into commercial or closed source solutions, if you don't wish to pitch in the extra PC.
+- Minimal software installs on the host (Mac)
+- Ability to flash the device from within Multipass VM
 
-The author is rather pleased about the arrangement, though. This is enough to let him proceed with the rest of the toolchain setup - see [EmbeddedRover](https://github.com/lure23/EmbeddedRover) for more.
+This was reached. :) You can now extend the reach by studying and modifying the other Embassy examples, and bringing your electronics and motor skills to the game!
 
-And - there's still 10 minutes of 2023 remaining. 
+This is probably a good place to stop the repo. It is doing its service if it made it easy for you to step in. Please **spread the word** and if you find any mistakes - or have other ESP32 boards you would like to be featured - chime in!
 
-Happy 🎉
-New Year
-Everyone!
+The plans of the author can be seen in the repo's [Issues](https://github.com/lure23/ESP32-Mac/issues) section.
 
+Happy Riscing! 🎉
+
+<!--
 Make great things!
-
 -->
 
 ## Q/A & Hints
@@ -563,7 +562,32 @@ You can increase the number of cores Multipass is allowed to use by:
 Then `multipass shell rust-emb` to get back in action.
 
 
+## DevKit specific
+
+### ESP32-C3-DevKitC-02
+
+The device has a single USB port. From chip revisions 0.3 onwards, it *does* also have JTAG circuitry, but enabling this needs hardware modifications.
+
+>The ESP32-C3 Devkit C doesn't expose the JTAG interface over USB by default, see the [ESP32-C3 debugging docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html) to configure the board for debugging or consider using the esp32c3-rust-board instead. <sub>[source](https://github.com/esp-rs/book/blob/main/src/tooling/debugging/index.md#usb-jtag-serial-peripheral)</sub>
+
+*If I get that right, it means* soldering *a USB connector to the said 4 pins. Haven't tried...*
+
+<!-- #later, if anything to say
+### ESP32-C3-DevKit-RUST-1
+
+...
+-->
+
+### ESP32-C6-DevKitM-1
+
+As already mentioned, the kit has two USB ports, `uart` and `JTAG-serial`. Programming works on both, but passing the console (`println`) output is by default sent to the `uart` port.
+
+- See above on how to steer the output to `uart` vs. `jtag-serial`, based on your needs.
+
+- [ ] What are the benefits of such dedicated JTAG connection?  (debugging; try and tell) *tbd.*
+
+
+
 ## References
 
 - [Embedded Rust (`no_std`) on Espressif](https://docs.esp-rs.org/no_std-training/02_2_software.html)
-
