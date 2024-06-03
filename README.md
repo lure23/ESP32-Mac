@@ -28,6 +28,14 @@ The explicit (and only) target is [Embassy](https://embassy.dev) development.
 	- ..including debugging
 -->
 
+### No nightlies needed!
+
+The repo only handles workflows on stable Rust. Needing to use `nightly` is unfortunately out of the scope.
+
+>*Furthermore, for ESP32-C3, a nightly version of the Rust toolchain is currently required, for this training we will use nightly-2023-11-14 version.* <sub>[Embedded Rust (no_std) on Espressif](https://docs.esp-rs.org/no_std-training/02_2_software.html)
+
+This might not hold any more, but the above text is there (2-Jun-24). Is it true? If so, C3 is ruled out.
+
 
 ## Requirements
 
@@ -192,7 +200,10 @@ The following commands are to be given in the `rust-emb` VM:
 	</details>
 
 
-## Run a sample // `esp-hal`
+## Run some examples from `esp-hal`
+
+>**Background**: The [esp-hal](https://github.com/esp-rs/esp-hal) repo (Hardware Abstraction Layer) has code that allows using the ESP32 hardware from Rust. It includes also an `examples` folder that we'll look into.
+
 
 ### Clone
 
@@ -207,17 +218,21 @@ $ git clone --depth 1 git@github.com:esp-rs/esp-hal.git
 ### Share the folder with VM
 
 ```
-$ cd esp-hal
-```
-
-```
 $ multipass stop rust-emb
 $ multipass mount --type=native esp-hal rust-emb:/home/ubuntu/esp-hal
 ```
 
+>Note: We don't need to enter the `esp-hal` folder on the host side. Just sharing it with the VM.
+
+<!-- disabled (too much)
+<p />
+
+>Warn: The size of the folder becomes around 1.9GB (try `du -h -d1 .`). This author prefers having such large folders on the host side. Your call, though.
+-->
+
 Now you have `esp-hal` available within the VM. 
 
->Note: Unfortunately, using `--type=native` requires the VM to be shut down when adding/removing mounts. On the other side, it promises better performance than default mounts. You should use it.
+>Note: Unfortunately, using `--type=native` requires the VM to be shut down when adding/removing mounts. On the other side, it promises better performance than default Multipass mounts.
 
 ### Restart the VM
 
@@ -243,10 +258,22 @@ $ cd esp-hal
 >
 >This is a treasure trove of dealing with different sensors. To begin with, we just build (and run) the `hello_world` to see connection to the development board would work.
 
+<!-- tbd...?
+-- here about editing `Cargo.toml` **IF** this helps with the console output:
+   
+#esp-println         = { path = "../esp-println", features = ["log"] }  // WAS 2-Jun-24
+esp-println         = { path = "../esp-println", default-features=false, features = ["log", "jtag-serial", "defmt-espflash"] }
+-->
+
 Within the `esp-hal` folder in the VM:
 
 ```
 $ cargo xtask run-example esp-hal esp32c6 hello_world
+```
+
+Output:
+
+```
     Updating crates.io index
   Downloaded proc-macro2 v1.0.85
   Downloaded strum_macros v0.26.3
@@ -417,4 +444,8 @@ You can increase the number of cores Multipass is allowed to use by:
 
 Then `multipass shell rust-emb` to get back in action.
 
+
+## References
+
+- [Embedded Rust (`no_std`) on Espressif](https://docs.esp-rs.org/no_std-training/02_2_software.html)
 
