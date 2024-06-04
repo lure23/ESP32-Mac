@@ -510,7 +510,7 @@ All this works because the `embassy_hello_world` uses `esp_println::println!` fo
 
 ### Other samples
 
-Now is a good time to check through the other 17 samples that start with `embassy_*`.
+Now is a good time to check through the other 24 `*embassy_*.rs` samples (note that wifi ones start with `esp_wifi_embassy`).
 
 
 ## What's so great about Embassy?
