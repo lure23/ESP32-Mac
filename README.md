@@ -1,16 +1,18 @@
 # ESP32/Rust on macOS
 
+**..with focus on [Embassy](https://embassy.dev)**
+
 Getting started with ESP32 Rust development, using macOS host (for IDE) and a Multipass VM (other tooling).
 
 >Note: This repo builds upon [ESP32 on WSL](https://github.com/lure23/ESP32-WSL) (Windows and WSL; esp-idf; C/C++)
->
->If you are interested in using WSL instead of Multipass, check that repo together with this. Also, you can attach the ESP32 dev board directly to the Mac, but this use case isn't covered in this repo, yet. <!-- #whisper (mostly because there's no good open source USB/IP server for macOS and Multipass doesn't have USB device management, unlike other VM solutions). -->
 
-<!-- tbd. eventually, a schematics picture on how it all falls in
+<!-- tbd. eventually, a schematics picture [[Excalidraw!]] on how it all falls in
 - USB server (usbipd, driver)
 - host (IDE)
 - Multipass (Rust, Cargo)
 - folder sharing
+
+Have the diagram first, talk about connecting devices directly to Mac after.
 -->
 
 ## Aim 🍏⛓️
@@ -22,31 +24,46 @@ Getting started with ESP32 Rust development, using macOS host (for IDE) and a Mu
 
 - RISC V only
 
-   >If you want Xtensa-based chips covered, please sign up as a co-author. :)
+   >If you want Xtensa-based chips covered, please sign up as a co-author. This one doesn't own the chips. :)
+
+<!-- Editor's note:
+   Support for Xtensa is slowly making itself to mainstream LLVM (within 2024?). Eventually a separate toolchain (`espup`) won't be needed. Even then, we should have a person with those chips checking that recipes continue to work.
+   -->
 
 - [Embassy](https://embassy.dev) async development
 
-   Embassy is a *generational shift* in embedded programming, like Node.js was for cloud backends.
+   Embassy is a *generational shift* in embedded programming. Its support for `async` without a separate RTOS makes concurrent programming linear to write. This is very similar to what Node.js did.
 
 - Only stable Rust
 
-	All ESP32 (RISC V) Rust development should be possible using the stable Rust (Jun'24). Documentation online still tells otherwise, but it may be either a) outdated and/or b) refer to Xtensa chip variants.
+	ESP32 (RISC V variants) Rust development is possible using the stable Rust (Jun'24). 
 
-	<!-- disabled; keep for now
-	>*Furthermore, for ESP32-C3, a nightly version of the Rust toolchain is currently required, for this training we will use nightly-2023-11-14 version.* <sub>[Embedded Rust (no_std) on Espressif](https://docs.esp-rs.org/no_std-training/02_2_software.html)
-	-->
 
 ## Requirements
 
 - Mac with:
    - [Multipass](https://multipass.run) installed
 
+<details open><summary>**Alternative A. Connecting devices via Windows**</summary>
+
 - Windows computer (Win10 Home is enough)
    - [`usbipd-win`](https://github.com/dorssel/usbipd-win) 4.2.0 (or later) installed
-
-      >Note: A Linux computer would do just as well, and the author plans to *eventually* provide guidance on using a Raspberry Pi for this USB hosting. You can probably set such up on your own, with basic Linux knowledge and adapting this guide.
-
    - `CP210x universal Windows driver` (11.3.0) installed from [CP210x USB to UART Bridge VCP Drivers](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers) (SiLabs)
+</details>
+
+<details><summary>**Alternative B. Connecting devices via Raspberry Pi**</summary>
+
+- See [`docs/rpi_usbipd.md`](docs/rpi_usbipd.md)
+</details>
+
+<details><summary>**Alternative C. Connecting devices directly to Mac**</summary>
+
+Not recommended.
+
+There's no good open source USB/IP server for macOS and Multipass doesn't have USB device management, unlike other VM solutions.
+
+>If you want to do this, also consider that attaching solderable electronics to a computer always carries risks. The author sees it beneficial to have an air gap between the USB/IP server and the development machine! ⚡️
+</details>
 
 	
 ### Embedded hardware
@@ -59,29 +76,61 @@ The intention is to support as many common ESP32 (RISC V) development boards as 
 
 ---
 
-|board|hw version<sub>`[1]`</sub>|chip revision<sub>`[2]`</sub>|status|notes|
+|board|hw version<sub>`[1]`</sub>|chip revision<sub>`[2]``[3]`</sub>|status|notes|
 |---|---|---|---|---|
-|**[ESP32-C3-DevKitC-02](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html)**|1.1|0.4|works with `espflash`|
-|**[ESP32-C6-DevKitM-1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/user_guide.html)**|1.0|0.0|works with `espflash`||
-|**[ESP32-C3-DevKit-RUST-1](https://www.espressif.com/en/dev-board/esp32-c3-devkit-rust-1-en)**|--|--|*tbd. Waiting for delivery (3-Jun-24)*|
+|**[ESP32-C3-DevKitC-02](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c3/hw-reference/esp32c3/user-guide-devkitc-02.html)**|"1.1"|0.4|works with `espflash`|
+|**[ESP32-C3-DevKit-RUST-1](https://www.espressif.com/en/dev-board/esp32-c3-devkit-rust-1-en)**|"1.2a&nbsp;(04/2022)"|0.4|works with `espflash`|
+|**[ESP32-C6-DevKitM-1](https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c6/esp32-c6-devkitm-1/user_guide.html)**|"1.0"|0.0|works with `espflash`||
 
 <small>
 `[1]`: version *physically printed* on the back side of the circuit board.
 
-`[2]`: revision listed when running `espflash board-info` or restarting a board. This matters to some functionality, e.g. for C3 boards JTAG functionality is available for chip revisions >= 0.4. Note that when earlier documentation and bootloaders mention chip revisions "3" and "4", they mean 0.3 and 0.4 (ESP-IDF 5.0 onwards).
+`[2]`: revision listed when running `espflash board-info` or restarting a board. This matters to some functionality, e.g. for C3 boards JTAG functionality (with added cable) is available for chip revisions >= 0.4.
+
+`[3]`: Earlier documentation and bootloaders (from the ESP-IDF 4 era; up till Dec'22) mention chip revisions "3" and "4", they mean 0.3 and 0.4.
 </small>
 
 #### Board specific notes
+
+The boards have USB connectors, but whether these are standard "USB+UART" (serial port) or connected to an integrated JTAG debugging circuitry varies.
+
+||VID:PID|flashing|comms|debug|
+|---|---|---|---|---|
+|UART|`10c4:ea60`|&check;|&check;|-|
+|JTAG|`303a:1001`|&check;|&check;|&check;|
+
+You can use either port for programming, but need JTAG for interactive debugging. UART is the default for `esp-hal`. Below, we will cover both.
+
+`VID:PID` are the device identifiers you'll see in USB access.
+
+**ESP32-C3-DevKitC-02**
+
+<!-- tbd. picture, just for the sake of it -->
+
+The board has just one Micro-USB port. To gain access to JTAG, you need to solder a USB cable to the board. [Details here](https://docs.espressif.com/projects/esp-idf/en/v5.2/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html)
+
+|pin|USB|wire color|
+|---|---|---|
+|GPIO18|D-|⬜️|
+|GPIO19|D+|🟩|
+|5V|V_BUS|🟥|
+|GND|Ground|⬛️|
+
+<!-- tbd. image of a board with USB cable soldered -->
+
+
+**ESP32-C3-DevKit-RUST-1**
+
+<!-- tbd. picture, just for the sake of it -->
+
+Has only JTAG connection (USB-C).
+
 
 **ESP32-C6-DevKitM-01**
 
 The dev board has two USB ports:
 
 ![](.images/devkitm-1-ports.png)
-
-Ideally, one could use either of these to reach the device, but in practice there are differences.
-
-*tbd. Explain the differences*
 
 For now, **connect the cable to the "left"** (`uart`) port. This way, the default settings of `esp-hal` (we'll get there soon) will allow `println` messages to be see on the VM terminal.
 
@@ -91,7 +140,7 @@ Developed on:
 
 Mac:
 - macOS 14.5 (Intel)
-- Multipass 1.13.1
+- Multipass 1.14.0-rc1
 - (CP210x device driver v. 6.0.2 optional; if running on single computer)
 
 Windows:
@@ -170,6 +219,21 @@ $ multipass shell rust-emb
               : (Defined at Interface level) (00/00/00)
               :  0 - Vendor Specific Class / unknown subclass / unknown protocol (ff/00/00)
    ```
+   </details>
+
+	<details><summary>**ESP32-C3-DevKit-RUST-1**</summary>
+
+   ```
+   Exportable USB devices
+   ======================
+	 - 192.168.1.29
+	        3-1: unknown vendor : unknown product (303a:1001)
+	           : USB\VID_303A&PID_1001\40:4C:CA:8D:9B:44
+	           : Miscellaneous Device / ? / Interface Association (ef/02/01)
+	           :  0 - Communications / Abstract (modem) / None (02/02/00)
+	           :  1 - CDC Data / unknown subclass / unknown protocol (0a/02/00)
+	           :  2 - Vendor Specific Class / Vendor Specific Subclass / unknown protocol (ff/ff/01)
+	```
    </details>
 
 	<details><summary>**ESP32-C6-DevKitM-1 (`uart`)**</summary>
@@ -566,17 +630,32 @@ Then `multipass shell rust-emb` to get back in action.
 
 ### ESP32-C3-DevKitC-02
 
-The device has a single USB port. From chip revisions 0.3 onwards, it *does* also have JTAG circuitry, but enabling this needs hardware modifications.
+The device has a single USB port. From chip revisions 0.3 onwards, it *does* also have JTAG circuitry, but enabling this needs soldering a USB cable to the device.
+
+<!-- tbd. Excalidraw diagram here on the pins to connect
+-->
 
 >The ESP32-C3 Devkit C doesn't expose the JTAG interface over USB by default, see the [ESP32-C3 debugging docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32c3/api-guides/jtag-debugging/configure-builtin-jtag.html) to configure the board for debugging or consider using the esp32c3-rust-board instead. <sub>[source](https://github.com/esp-rs/book/blob/main/src/tooling/debugging/index.md#usb-jtag-serial-peripheral)</sub>
 
-*If I get that right, it means* soldering *a USB connector to the said 4 pins. Haven't tried...*
+*Tried this, and it works. However, what benefits JTAG really brings over UART needs to be studied..* <!-- tbd. when would one benefit from the soldering?  `probe-rs` debugging, likely -->
 
-<!-- #later, if anything to say
 ### ESP32-C3-DevKit-RUST-1
 
-...
--->
+Be aware before purchasing:
+
+This board contains some peripherals to get started easier. Having Rust in its name seems enticing. It's intended for educational purposes.
+
+However:
+
+- its availability may be worse than the other two
+- it comes without pins soldered so you must add those before using on a breadboard
+- anecdotally, the author's board cost 50 euros (**about 5x more than the others!**) 
+- ..and he needed to fill all kinds of *export forms* that weren't needed by the other, computationally similar boards.
+
+This is the kind of logistics friction we can do without. The shopping and using experience with the other two boards was smooth, in comparison!
+
+<!-- Purchased in 2024 via Mouser. Shipped from the US. -->
+
 
 ### ESP32-C6-DevKitM-1
 
